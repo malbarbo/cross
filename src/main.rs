@@ -22,7 +22,7 @@ use std::io::Write;
 use std::process::ExitStatus;
 use std::{env, io, process};
 
-use toml::{Parser, Value};
+use toml::Value;
 
 use cargo::Root;
 use errors::*;
@@ -424,7 +424,7 @@ impl Toml {
         let triple = target.triple();
 
         if let Some(value) = self.table
-            .lookup(&format!("target.{}.image", triple)) {
+            .get(&format!("target.{}.image", triple)) {
             Ok(Some(value.as_str()
                 .ok_or_else(|| {
                     format!("target.{}.image must be a string", triple)
@@ -438,13 +438,13 @@ impl Toml {
     pub fn xargo(&self, target: &Target) -> Result<Option<bool>> {
         let triple = target.triple();
 
-        if let Some(value) = self.table.lookup("build.xargo") {
+        if let Some(value) = self.table.get("build.xargo") {
             return Ok(Some(value.as_bool()
                 .ok_or_else(|| "build.xargo must be a boolean")?));
         }
 
         if let Some(value) = self.table
-            .lookup(&format!("target.{}.xargo", triple)) {
+            .get(&format!("target.{}.xargo", triple)) {
             Ok(Some(value.as_bool()
                 .ok_or_else(|| {
                     format!("target.{}.xargo must be a boolean", triple)
@@ -461,10 +461,10 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
 
     if path.exists() {
         Ok(Some(Toml {
-            table: Value::Table(Parser::new(&file::read(&path)?).parse()
-                .ok_or_else(|| {
+            table: toml::from_str(&file::read(&path)?)
+                .map_err(|_| {
                     format!("couldn't parse {} as TOML", path.display())
-                })?),
+                })?,
         }))
     } else {
         Ok(None)
