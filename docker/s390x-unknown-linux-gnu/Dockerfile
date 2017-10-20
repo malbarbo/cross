@@ -1,4 +1,5 @@
-FROM ubuntu:16.04
+# FROM ubuntu:16.04
+FROM debian:9
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -18,6 +19,9 @@ RUN apt-get install -y --no-install-recommends \
     libc6-dev-s390x-cross && \
     bash /openssl.sh linux64-s390x s390x-linux-gnu- && \
     bash /qemu.sh s390x
+
+COPY linux-image.sh /
+RUN bash /linux-image.sh s390x stretch
 
 ENV CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER=qemu-s390x \

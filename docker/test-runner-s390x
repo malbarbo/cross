@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -ex
+
+(
+    flock -n 200 || exit 0
+    qemu-system-s390x -m 3000 -nographic \
+      -kernel vmlinuz \
+      -initrd initrd.img \
+      -netdev user,id=net0,hostfwd=tcp::10022-:22 \
+      -device virtio-net-ccw,netdev=net0 \
+      -fsdev local,id=fs0,path=./target,security_model=none \
+      -device virtio-9p-ccw,fsdev=fs0,mount_tag=target
+) 200> qemu.lock 

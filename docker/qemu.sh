@@ -4,7 +4,17 @@ main() {
     local version=2.9.0
 
     local arch=$1 \
+          system=$2 \
           td=$(mktemp -d)
+
+    local flags=
+    local target=
+    if [[ "$system" == "" ]]; then
+        target="$arch-linux-user"
+    else
+        target="$arch-softmmu"
+        flags="--enable-virtfs"
+    fi
 
     local dependencies=(
         autoconf
@@ -17,6 +27,7 @@ main() {
         make
         pkg-config
         zlib1g-dev
+        python
     )
 
     apt-get update
@@ -35,15 +46,14 @@ main() {
     ./configure \
         --disable-kvm \
         --disable-vnc \
-        --enable-user \
         --static \
-        --target-list=$arch-linux-user
+        --target-list=$target $flags
     nice make -j$(nproc)
     make install
 
     # HACK the binfmt_misc interpreter we'll use expects the QEMU binary to be
     # in /usr/bin. Create an appropriate symlink
-    ln -s /usr/local/bin/qemu-$arch /usr/bin/qemu-$arch-static
+    ln -s /usr/local/bin/qemu-$arch /usr/bin/qemu-$arch-static || true
 
     # Clean up
     apt-get purge --auto-remove -y ${purge_list[@]}
