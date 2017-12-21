@@ -182,54 +182,57 @@ table below) if it can successfully
 run [compiler-builtins](https://github.com/rust-lang-nursery/compiler-builtins)
 test suite.
 
+
 Also, testing is very slow. `cross` will actually run units tests *sequentially*
 because QEMU gets upset when you spawn several threads. This also means that, if
 one of your unit tests spawns several threads then it's more likely to fail or,
 worst, "hang" (never terminate).
 
-| Target                               |  libc  |   GCC   | OpenSSL | C++ | QEMU  | `test` |
-|--------------------------------------|--------|---------|---------|:---:|-------|:------:|
-| `aarch64-linux-android` [5]          | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `aarch64-unknown-linux-gnu`          | 2.19   | 4.8.2   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `arm-linux-androideabi` [5]          | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `arm-unknown-linux-gnueabi`          | 2.19   | 4.8.2   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `arm-unknown-linux-musleabi`         | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
-| `armv7-linux-androideabi` [5]        | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `armv7-unknown-linux-gnueabihf`      | 2.15   | 4.6.2   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `armv7-unknown-linux-musleabihf`     | 1.1.15 | 5.3.1   | N/A     |     | 2.8.0 |   ✓    |
-| `asmjs-unknown-emscripten` [4]       | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
-| `i586-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `i686-linux-android` [5]             | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `i686-pc-windows-gnu`                | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
-| `i686-unknown-freebsd` [1]           | 10.2   | 5.3.0   | 1.0.2m  |     | N/A   |        |
-| `i686-unknown-linux-gnu`             | 2.15   | 4.6.2   | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `i686-unknown-linux-musl`            | 1.1.15 | 5.3.1   | 1.0.2m  |     | N/A   |   ✓    |
-| `mips-unknown-linux-gnu`             | 2.23   | 5.3.1   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `mips64-unknown-linux-gnuabi64`      | 2.23   | 5.3.1   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `mips64el-unknown-linux-gnuabi64`    | 2.23   | 5.3.1   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `mipsel-unknown-linux-gnu`           | 2.23   | 5.3.1   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `powerpc-unknown-linux-gnu`          | 2.19   | 4.8.2   | 1.0.2m  | ✓   | 2.7.1 |   ✓    |
-| `powerpc64-unknown-linux-gnu`        | 2.19   | 4.8.2   | 1.0.2m  | ✓   | 2.7.1 |   ✓    |
-| `powerpc64le-unknown-linux-gnu`      | 2.19   | 4.8.2   | 1.0.2m  | ✓   | 2.7.1 |   ✓    |
-| `s390x-unknown-linux-gnu`            | 2.23   | 5.3.1   | 1.0.2m  | ✓   | 2.8.0 |        |
-| `sparc64-unknown-linux-gnu` [2]      | 2.23   | 5.3.1   | 1.0.2m  | ✓   | 2.8.0 |   ✓    |
-| `sparcv9-sun-solaris` [1]            | 2.11   | 5.3.0   | 1.0.2m  |     | N/A   |        |
-| `thumbv6m-none-eabi` [3]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7em-none-eabi` [3]            | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7em-none-eabihf` [3]          | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `thumbv7m-none-eabi` [3]             | 2.2.0  | 5.3.1   | N/A     |     | N/A   |        |
-| `wasm32-unknown-emscripten` [4]      | 1.1.15 | 1.37.13 | N/A     | ✓   | N/A   |   ✓    |
-| `x86_64-linux-android` [5]           | N/A    | 4.9     | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `x86_64-pc-windows-gnu`              | N/A    | 6.2.0   | N/A     | ✓   | N/A   |   ✓    |
-| `x86_64-sun-solaris` [1]             | 2.11   | 5.3.0   | 1.0.2m  |     | N/A   |        |
-| `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  | 5.3.0   | 1.0.2m  |     | N/A   |   ✓    |
-| `x86_64-unknown-freebsd` [1]         | 10.2   | 5.3.0   | 1.0.2m  |     | N/A   |        |
-| `x86_64-unknown-linux-gnu`           | 2.15   | 4.6.2   | 1.0.2m  | ✓   | N/A   |   ✓    |
-| `x86_64-unknown-linux-musl`          | 1.1.15 | 5.3.1   | 1.0.2m  |     | N/A   |   ✓    |
-| `x86_64-unknown-netbsd`[1]           | 7.0    | 5.3.0   | 1.0.2m  |     | N/A   |        |
+We are using QEMU version 2.11.0 and OpenSSL version 1.0.2m.
 
-[1] For *BSD and Solaris targets, the libc column indicates the OS release version from
-where libc was extracted.
+| Target                               |  libc  | OpenSSL |   GCC   | C++ | `test` |
+|--------------------------------------|--------|---------|---------|:---:|:------:|
+| `aarch64-linux-android` [1] [5]      | 5.0.0  |   ✓     | 4.9     |  ✓  |  qemu  |
+| `aarch64-unknown-linux-gnu`          | 2.19   |   ✓     | 4.8.2   |  ✓  |  qemu  |
+| `arm-linux-androideabi` [1] [5]      | 5.0.0  |   ✓     | 4.9     |  ✓  |  qemu  |
+| `arm-unknown-linux-gnueabi`          | 2.19   |   ✓     | 4.8.2   |  ✓  |  qemu  |
+| `arm-unknown-linux-musleabi`         | 1.1.15 |         | 5.3.1   |     |  qemu  |
+| `armv7-linux-androideabi` [1] [5]    | 5.0.0  |   ✓     | 4.9     |  ✓  |  qemu  |
+| `armv7-unknown-linux-gnueabihf`      | 2.15   |   ✓     | 4.6.2   |  ✓  |  qemu  |
+| `armv7-unknown-linux-musleabihf`     | 1.1.15 |         | 5.3.1   |     |  qemu  |
+| `asmjs-unknown-emscripten` [4]       | 1.1.15 |         | 1.37.13 |  ✓  | nodejs |
+| `i586-unknown-linux-gnu`             | 2.23   |   ✓     | 5.3.1   |  ✓  | native |
+| `i686-linux-android` [1] [5]         | 5.0.0  |   ✓     | 4.9     |  ✓  |  qemu  |
+| `i686-pc-windows-gnu`                |        |         | 6.2.0   |  ✓  |  wine  |
+| `i686-unknown-freebsd` [1]           | 10.2   |   ✓     | 5.3.0   |     |        |
+| `i686-unknown-linux-gnu`             | 2.15   |   ✓     | 4.6.2   |  ✓  | native |
+| `i686-unknown-linux-musl`            | 1.1.15 |   ✓     | 5.3.1   |     |  qemu  |
+| `mips-unknown-linux-gnu`             | 2.23   |   ✓     | 5.3.1   |  ✓  |  qemu  |
+| `mips64-unknown-linux-gnuabi64`      | 2.23   |   ✓     | 5.3.1   |  ✓  |  qemu  |
+| `mips64el-unknown-linux-gnuabi64`    | 2.23   |   ✓     | 5.3.1   |  ✓  |  qemu  |
+| `mipsel-unknown-linux-gnu`           | 2.23   |   ✓     | 5.3.1   |  ✓  |  qemu  |
+| `powerpc-unknown-linux-gnu`          | 2.19   |   ✓     | 4.8.2   |  ✓  |  qemu  |
+| `powerpc64-unknown-linux-gnu`        | 2.19   |   ✓     | 4.8.2   |  ✓  |  qemu  |
+| `powerpc64le-unknown-linux-gnu`      | 2.19   |   ✓     | 4.8.2   |  ✓  |  qemu  |
+| `s390x-unknown-linux-gnu`            | 2.23   |   ✓     | 5.3.1   |  ✓  |        |
+| `sparc64-unknown-linux-gnu` [2]      | 2.23   |   ✓     | 5.3.1   |  ✓  |  qemu  |
+| `sparcv9-sun-solaris` [1]            | 2.11   |   ✓     | 5.3.0   |     |        |
+| `thumbv6m-none-eabi` [3]             | 2.2.0  |         | 5.3.1   |     |        |
+| `thumbv7em-none-eabi` [3]            | 2.2.0  |         | 5.3.1   |     |        |
+| `thumbv7em-none-eabihf` [3]          | 2.2.0  |         | 5.3.1   |     |        |
+| `thumbv7m-none-eabi` [3]             | 2.2.0  |         | 5.3.1   |     |        |
+| `wasm32-unknown-emscripten` [4]      | 1.1.15 |         | 1.37.13 |  ✓  | nodejs |
+| `x86_64-linux-android` [1] [5]       | 5.0.0  |   ✓     | 4.9     |  ✓  |  qemu  |
+| `x86_64-pc-windows-gnu`              |        |         | 6.2.0   |  ✓  |  wine  |
+| `x86_64-sun-solaris` [1]             | 2.11   |   ✓     | 5.3.0   |     |        |
+| `x86_64-unknown-dragonfly` [1] [2]   | 4.6.0  |   ✓     | 5.3.0   |     |        |
+| `x86_64-unknown-freebsd` [1]         | 10.2   |   ✓     | 5.3.0   |     |        |
+| `x86_64-unknown-linux-gnu`           | 2.15   |   ✓     | 4.6.2   |  ✓  | native |
+| `x86_64-unknown-linux-musl`          | 1.1.15 |   ✓     | 5.3.1   |     | native |
+| `x86_64-unknown-netbsd`[1]           | 7.0    |   ✓     | 5.3.0   |     |        |
+
+[1] For Android, \*BSD and Solaris targets, the libc column indicates the OS
+    release version from where libc was extracted.
 
 [2] No `std` component available as of 2017-01-10
 
