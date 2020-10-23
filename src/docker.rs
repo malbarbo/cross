@@ -3,7 +3,6 @@ use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
 use atty::Stream;
-use serde_json;
 
 use crate::cargo::Root;
 use crate::errors::*;
@@ -226,7 +225,7 @@ fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
     };
 
     let output = docker.run_and_get_stdout(false)?;
-    let info = if let Ok(val) = serde_json::from_str(&output) {
+    let info = if let Ok(val) = json::parse(&output) {
         Ok(val)
     } else {
         Err("failed to parse docker inspect output")
@@ -235,24 +234,22 @@ fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
     dockerinfo_parse_mounts(&info)
 }
 
-fn dockerinfo_parse_mounts(info: &serde_json::Value) -> Result<Vec<MountDetail>> {
+fn dockerinfo_parse_mounts(info: &json::JsonValue) -> Result<Vec<MountDetail>> {
     let mut mounts = dockerinfo_parse_user_mounts(info);
     let root_info = dockerinfo_parse_root_mount_path(info)?;
     mounts.push(root_info);
     Ok(mounts)
 }
 
-fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDetail> {
-    let driver_name = info
-        .pointer("/0/GraphDriver/Name")
-        .and_then(|v| v.as_str())
-        .ok_or("No driver name found")?;
+fn dockerinfo_parse_root_mount_path(info: &json::JsonValue) -> Result<MountDetail> {
+    let driver_name = info["GraphDriver"]["Name"].as_str().ok_or_else(||
+        Error::from("No driver name found")
+    )?;
 
     if driver_name == "overlay2" {
-        let path = info
-            .pointer("/0/GraphDriver/Data/MergedDir")
-            .and_then(|v| v.as_str())
-            .ok_or("No merge directory found")?;
+        let path = info["GraphDriver"]["Data"]["MergedDir"].as_str().ok_or_else(||
+            Error::from("No merge directory found")
+        )?;
 
         Ok(MountDetail {
             source: PathBuf::from(&path),
@@ -263,23 +260,18 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
     }
 }
 
-fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
-    info.pointer("/0/Mounts")
-        .and_then(|v| v.as_array())
-        .map(|v| {
-            let make_path = |v: &serde_json::Value| PathBuf::from(&v.as_str().unwrap());
-            let mut mounts = vec![];
-            for details in v {
-                let source = make_path(&details["Source"]);
-                let destination = make_path(&details["Destination"]);
-                mounts.push(MountDetail {
-                    source,
-                    destination,
-                });
-            }
-            mounts
-        })
-        .unwrap_or_else(|| Vec::new())
+fn dockerinfo_parse_user_mounts(info: &json::JsonValue) -> Vec<MountDetail> {
+    let make_path = |v: &json::JsonValue| PathBuf::from(&v.as_str().unwrap());
+    let mut mounts = vec![];
+    for details in info["Mounts"].members() {
+        let source = make_path(&details["Source"]);
+        let destination = make_path(&details["Destination"]);
+        mounts.push(MountDetail {
+            source,
+            destination,
+        });
+    }
+    mounts
 }
 
 #[derive(Debug, Default)]
@@ -378,11 +370,11 @@ mod tests {
 
     mod parse_docker_inspect {
         use super::*;
-        use serde_json::json;
+        use json;
 
         #[test]
         fn test_parse_container_root() {
-            let actual = dockerinfo_parse_root_mount_path(&json!([{
+            let actual = dockerinfo_parse_root_mount_path(&json::parse(r#"{
                 "GraphDriver": {
                     "Data": {
                         "LowerDir": "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4-init/diff:/var/lib/docker/overlay2/dfe81d459bbefada7aa897a9d05107a77145b0d4f918855f171ee85789ab04a0/diff:/var/lib/docker/overlay2/1f704696915c75cd081a33797ecc66513f9a7a3ffab42d01a3f17c12c8e2dc4c/diff:/var/lib/docker/overlay2/0a4f6cb88f4ace1471442f9053487a6392c90d2c6e206283d20976ba79b38a46/diff:/var/lib/docker/overlay2/1ee3464056f9cdc968fac8427b04e37ec96b108c5050812997fa83498f2499d1/diff:/var/lib/docker/overlay2/0ec5a47f1854c0f5cfe0e3f395b355b5a8bb10f6e622710ce95b96752625f874/diff:/var/lib/docker/overlay2/f24c8ad76303838b49043d17bf2423fe640836fd9562d387143e68004f8afba0/diff:/var/lib/docker/overlay2/462f89d5a0906805a6f2eec48880ed1e48256193ed506da95414448d435db2b7/diff",
@@ -391,8 +383,8 @@ mod tests {
                         "WorkDir": "/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/work"
                     },
                     "Name": "overlay2"
-                },
-            }])).unwrap();
+                }
+            }"#).unwrap()).unwrap();
             let want = MountDetail {
                 source: PathBuf::from("/var/lib/docker/overlay2/f107af83b37bc0a182d3d2661f3d84684f0fffa1a243566b338a388d5e54bef4/merged"),
                 destination: PathBuf::from("/"),
@@ -402,17 +394,17 @@ mod tests {
 
         #[test]
         fn test_parse_empty_user_mounts() {
-            let actual = dockerinfo_parse_user_mounts(&json!([{
-                "Mounts": [],
-            }]));
+            let actual = dockerinfo_parse_user_mounts(&json::parse(r#"{
+                "Mounts": []
+            }"#).unwrap());
             assert_eq!(Vec::<MountDetail>::new(), actual);
         }
 
         #[test]
         fn test_parse_missing_user_moutns() {
-            let actual = dockerinfo_parse_user_mounts(&json!([{
-                "Id": "test",
-            }]));
+            let actual = dockerinfo_parse_user_mounts(&json::parse(r#"{
+                "Id": "test"
+            }"#).unwrap());
             assert_eq!(Vec::<MountDetail>::new(), actual);
         }
     }

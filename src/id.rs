@@ -46,7 +46,7 @@ pub fn username() -> Result<Option<String>, String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn username() -> Result<Option<String>, errors::Error>  {
+pub fn username() -> Result<Option<String>, crate::errors::Error>  {
     use std::ffi::CStr;
     use std::io::Error;
 
