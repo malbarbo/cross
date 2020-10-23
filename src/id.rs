@@ -1,10 +1,3 @@
-#[cfg(not(target_os = "windows"))]
-use libc;
-#[cfg(not(target_os = "windows"))]
-use std::ffi::CStr;
-#[cfg(not(target_os = "windows"))]
-use nix::{errno::{errno, Errno}, unistd::{Gid, Uid}, Error};
-
 #[cfg(target_os = "windows")]
 pub fn group() -> u32 {
     1000
@@ -12,7 +5,7 @@ pub fn group() -> u32 {
 
 #[cfg(not(target_os = "windows"))]
 pub fn group() -> u32 {
-    Gid::current().as_raw()
+    unsafe { libc::getgid() }
 }
 
 #[cfg(target_os = "windows")]
@@ -22,7 +15,7 @@ pub fn user() -> u32 {
 
 #[cfg(not(target_os = "windows"))]
 pub fn user() -> u32 {
-    Uid::current().as_raw()
+    unsafe { libc::getuid() }
 }
 
 #[cfg(target_os = "windows")]
@@ -53,18 +46,20 @@ pub fn username() -> Result<Option<String>, String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn username() -> Result<Option<String>, Error>  {
-    let name = unsafe {
-        Errno::clear();
+pub fn username() -> Result<Option<String>, errors::Error>  {
+    use std::ffi::CStr;
+    use std::io::Error;
 
-        let passwd = libc::getpwuid(Uid::current().as_raw());
+    let name = unsafe {
+        let passwd = libc::getpwuid(user());
 
         if passwd.is_null() {
-            let errno = errno();
-
-            if errno == 0 { return Ok(None) }
-
-            return Err(Error::Sys(Errno::from_i32(errno)))
+            let err = Error::last_os_error();
+            match err.raw_os_error() {
+                Some(0) => return Ok(None),
+                Some(_) => return Err(err.into()),
+                _ => (),
+            }
         }
 
         CStr::from_ptr((*passwd).pw_name)
