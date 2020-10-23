@@ -170,30 +170,12 @@ impl From<Host> for Target {
 }
 
 pub fn main() {
-    fn show_backtrace() -> bool {
-        env::var("RUST_BACKTRACE").as_ref().map(|s| &s[..]) == Ok("1")
-    }
-
     match run() {
         Err(e) => {
             let stderr = io::stderr();
             let mut stderr = stderr.lock();
 
             writeln!(stderr, "error: {}", e).ok();
-
-            for e in e.iter().skip(1) {
-                writeln!(stderr, "caused by: {}", e).ok();
-            }
-
-            if show_backtrace() {
-                if let Some(backtrace) = e.backtrace() {
-                    writeln!(stderr, "{:?}", backtrace).ok();
-                }
-            } else {
-                writeln!(stderr,
-                         "note: run with `RUST_BACKTRACE=1` for a backtrace")
-                    .ok();
-            }
 
             process::exit(1)
         }
@@ -218,7 +200,7 @@ fn run() -> Result<ExitStatus> {
     let verbose =
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
+    let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version".to_string())?;
     if let Some(root) = cargo::root()? {
         let host = version_meta.host();
 

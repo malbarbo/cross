@@ -65,7 +65,7 @@ impl Root {
 
 /// Cargo project root
 pub fn root() -> Result<Option<Root>> {
-    let cd = env::current_dir().chain_err(|| "couldn't get current directory")?;
+    let cd = env::current_dir().chain_err(|| "couldn't get current directory".to_string())?;
 
     let mut dir = &*cd;
     loop {

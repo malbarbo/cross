@@ -3,7 +3,6 @@ use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
 use atty::Stream;
-use error_chain::bail;
 use serde_json;
 
 use crate::cargo::Root;
@@ -102,13 +101,11 @@ pub fn run(target: &Target,
     if let Some(toml) = toml {
         let validate_env_var = |var: &str| -> Result<()> {
             if var.contains('=') {
-                bail!("environment variable names must not contain the '=' character");
+                return Err("environment variable names must not contain the '=' character".into());
             }
 
             if var == "CROSS_RUNNER" {
-                bail!(
-                    "CROSS_RUNNER environment variable name is reserved and cannot be pass through"
-                );
+                return Err("CROSS_RUNNER environment variable name is reserved and cannot be pass through".into());
             }
 
             Ok(())
@@ -198,8 +195,8 @@ pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
     let triple = target.triple();
 
     if !DOCKER_IMAGES.contains(&triple) {
-        bail!("`cross` does not provide a Docker image for target {}, \
-               specify a custom image in `Cross.toml`.", triple);
+        return Err(format!("`cross` does not provide a Docker image for target {}, \
+                            specify a custom image in `Cross.toml`.", triple).into());
     }
 
     let version = env!("CARGO_PKG_VERSION");
