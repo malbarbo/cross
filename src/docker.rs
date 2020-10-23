@@ -58,6 +58,7 @@ pub fn register(target: &Target, verbose: bool) -> Result<()> {
         .run(verbose)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(target: &Target,
            args: &[String],
            target_dir: &Option<PathBuf>,
@@ -290,7 +291,7 @@ fn dockerinfo_parse_user_mounts(info: &serde_json::Value) -> Vec<MountDetail> {
             }
             mounts
         })
-        .unwrap_or_else(|| Vec::new())
+        .unwrap_or_else(Vec::new)
 }
 
 #[derive(Debug, Default)]
@@ -322,7 +323,7 @@ impl MountFinder {
                 return info.source.join(stripped);
             }
         }
-        return path.to_path_buf();
+        path.to_path_buf()
     }
 }
 

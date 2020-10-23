@@ -48,7 +48,7 @@ pub fn parse(target_list: &TargetList) -> Args {
             } else if arg.starts_with("--target-dir=") {
                 if let Some(td) = arg.splitn(2, '=').nth(1) {
                     target_dir = Some(PathBuf::from(&td));
-                    all.push(format!("--target-dir=/target"));
+                    all.push("--target-dir=/target".to_string());
                 }
             } else {
                 if !arg.starts_with('-') && sc.is_none() {

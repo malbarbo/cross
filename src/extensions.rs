@@ -67,7 +67,7 @@ impl SafeCommand {
         }
     }
 
-    pub fn arg<'b, S>(&mut self, arg: &S) -> &mut Self
+    pub fn arg<S>(&mut self, arg: &S) -> &mut Self
         where
             S: ToString,
     {
