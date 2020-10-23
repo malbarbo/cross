@@ -11,9 +11,8 @@ mod interpreter;
 mod rustc;
 mod rustup;
 
-use std::io::Write;
 use std::process::ExitStatus;
-use std::{env, io, process};
+use std::{env, process};
 
 use toml::{Value, value::Table};
 
@@ -170,31 +169,9 @@ impl From<Host> for Target {
 }
 
 pub fn main() {
-    fn show_backtrace() -> bool {
-        env::var("RUST_BACKTRACE").as_ref().map(|s| &s[..]) == Ok("1")
-    }
-
     match run() {
         Err(e) => {
-            let stderr = io::stderr();
-            let mut stderr = stderr.lock();
-
-            writeln!(stderr, "error: {}", e).ok();
-
-            for e in e.iter().skip(1) {
-                writeln!(stderr, "caused by: {}", e).ok();
-            }
-
-            if show_backtrace() {
-                if let Some(backtrace) = e.backtrace() {
-                    writeln!(stderr, "{:?}", backtrace).ok();
-                }
-            } else {
-                writeln!(stderr,
-                         "note: run with `RUST_BACKTRACE=1` for a backtrace")
-                    .ok();
-            }
-
+            eprintln!("{}", e);
             process::exit(1)
         }
         Ok(status) => {
@@ -218,7 +195,7 @@ fn run() -> Result<ExitStatus> {
     let verbose =
         args.all.iter().any(|a| a == "--verbose" || a == "-v" || a == "-vv");
 
-    let version_meta = rustc_version::version_meta().chain_err(|| "couldn't fetch the `rustc` version")?;
+    let version_meta = rustc_version::version_meta().with_context(|| "couldn't fetch the `rustc` version")?;
     if let Some(root) = cargo::root()? {
         let host = version_meta.host();
 
@@ -229,7 +206,7 @@ fn run() -> Result<ExitStatus> {
 
             let mut sysroot = rustc::sysroot(&host, &target, verbose)?;
             let default_toolchain = sysroot.file_name().and_then(|file_name| file_name.to_str())
-                .ok_or("couldn't get toolchain name")?;
+                .ok_or(error!("couldn't get toolchain name"))?;
             let toolchain = if let Some(channel) = args.channel {
                 [channel].iter().map(|c| c.as_str()).chain(
                     default_toolchain.splitn(2, '-').skip(1)
@@ -278,7 +255,7 @@ fn run() -> Result<ExitStatus> {
                     false
                 },
             };
-            
+
             let filtered_args = if args.subcommand.map_or(false, |s| !s.needs_target_in_command()) {
                 let mut filtered_args = Vec::new();
                 let mut args_iter = args.all.clone().into_iter();
@@ -336,7 +313,7 @@ impl Toml {
         if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("image")) {
             Ok(Some(value.as_str()
                 .ok_or_else(|| {
-                    format!("target.{}.image must be a string", triple)
+                    error!("target.{}.image must be a string", triple)
                 })?))
         } else {
             Ok(None)
@@ -349,7 +326,7 @@ impl Toml {
 
         if let Some(value) = self.table.get("target").and_then(|t| t.get(triple)).and_then(|t| t.get("runner")) {
             let value = value.as_str()
-                .ok_or_else(|| format!("target.{}.runner must be a string", triple))?
+                .ok_or_else(|| error!("target.{}.runner must be a string", triple))?
                 .to_string();
             Ok(Some(value))
         } else {
@@ -363,13 +340,13 @@ impl Toml {
 
         if let Some(value) = self.table.get("build").and_then(|b| b.get("xargo")) {
             return Ok(Some(value.as_bool()
-                .ok_or_else(|| "build.xargo must be a boolean")?));
+                .ok_or_else(|| error!("build.xargo must be a boolean"))?));
         }
 
         if let Some(value) = self.table.get("target").and_then(|b| b.get(triple)).and_then(|t| t.get("xargo")) {
             Ok(Some(value.as_bool()
                 .ok_or_else(|| {
-                    format!("target.{}.xargo must be a boolean", triple)
+                    error!("target.{}.xargo must be a boolean", triple)
                 })?))
         } else {
             Ok(None)
@@ -403,7 +380,7 @@ impl Toml {
             Some(&Value::Array(ref vec)) => {
                 vec.iter().map(|val| {
                     val.as_str().ok_or_else(|| {
-                        format!("every target.{}.env.{} element must be a string",  triple, key).into()
+                        error!("every target.{}.env.{} element must be a string",  triple, key)
                     })
                 }).collect()
             },
@@ -415,7 +392,7 @@ impl Toml {
         match self.table.get("build").and_then(|b| b.get("env")).and_then(|e| e.get(key)) {
             Some(&Value::Array(ref vec)) => {
                 vec.iter().map(|val| {
-                    val.as_str().ok_or_else(|| format!("every build.env.{} element must be a string", key).into())
+                    val.as_str().ok_or_else(|| error!("every build.env.{} element must be a string", key))
                 }).collect()
             },
             _ => Ok(Vec::new()),
@@ -432,7 +409,7 @@ fn toml(root: &Root) -> Result<Option<Toml>> {
             table: if let Ok(Value::Table(table)) = file::read(&path)?.parse() {
                 table
             } else {
-                return Err(format!("couldn't parse {} as TOML table", path.display()).into())
+                return Err(error!("couldn't parse {} as TOML table", path.display()))
             },
         }))
     } else {

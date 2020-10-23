@@ -23,7 +23,7 @@ impl CommandExt for Command {
         if status.success() {
             Ok(())
         } else {
-            Err(format!("`{:?}` failed with exit code: {:?}", self, status.code()).into())
+            Err(error!("`{:?}` failed with exit code: {:?}", self, status.code()))
         }
     }
 
@@ -37,19 +37,19 @@ impl CommandExt for Command {
     fn run_and_get_status(&mut self, verbose: bool) -> Result<ExitStatus> {
         self.print_verbose(verbose);
         self.status()
-            .chain_err(|| format!("couldn't execute `{:?}`", self))
+            .with_context(|| format!("couldn't execute `{:?}`", self))
     }
 
     /// Runs the command to completion and returns its stdout
     fn run_and_get_stdout(&mut self, verbose: bool) -> Result<String> {
         self.print_verbose(verbose);
         let out = self.output()
-            .chain_err(|| format!("couldn't execute `{:?}`", self))?;
+            .with_context(|| format!("couldn't execute `{:?}`", self))?;
 
         self.status_result(out.status)?;
 
         Ok(String::from_utf8(out.stdout)
-            .chain_err(|| format!("`{:?}` output was not UTF-8", self))?)
+            .with_context(|| format!("`{:?}` output was not UTF-8", self))?)
     }
 }
 

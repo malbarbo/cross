@@ -3,7 +3,6 @@ use std::process::{Command, ExitStatus};
 use std::{env, fs};
 
 use atty::Stream;
-use error_chain::bail;
 use serde_json;
 
 use crate::cargo::Root;
@@ -35,7 +34,7 @@ pub fn docker_command(subcommand: &str) -> Result<Command> {
         command.args(&["--userns", "host"]);
         Ok(command)
     } else {
-        Err("no container engine found; install docker or podman".into())
+        Err(error!("no container engine found; install docker or podman"))
     }
 }
 
@@ -75,7 +74,7 @@ pub fn run(target: &Target,
     };
 
     let root = root.path();
-    let home_dir = home::home_dir().ok_or_else(|| "could not find home directory")?;
+    let home_dir = home::home_dir().context("could not find home directory")?;
     let cargo_dir = home::cargo_home()?;
     let xargo_dir = env::var_os("XARGO_HOME")
         .map(PathBuf::from)
@@ -222,12 +221,7 @@ pub fn image(toml: Option<&Toml>, target: &Target) -> Result<String> {
 }
 
 fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
-    let hostname = if let Ok(v) = env::var("HOSTNAME") {
-        Ok(v)
-    } else {
-        Err("HOSTNAME environment variable not found")
-    }?;
-
+    let hostname = env::var("HOSTNAME").context("HOSTNAME environment variable not found")?;
     let docker_path = which::which(DOCKER)?;
     let mut docker: Command = {
         let mut command = Command::new(docker_path);
@@ -237,11 +231,7 @@ fn docker_read_mount_paths() -> Result<Vec<MountDetail>> {
     };
 
     let output = docker.run_and_get_stdout(false)?;
-    let info = if let Ok(val) = serde_json::from_str(&output) {
-        Ok(val)
-    } else {
-        Err("failed to parse docker inspect output")
-    }?;
+    let info = serde_json::from_str(&output).context("failed to parse docker inspect output")?;
 
     dockerinfo_parse_mounts(&info)
 }
@@ -257,20 +247,20 @@ fn dockerinfo_parse_root_mount_path(info: &serde_json::Value) -> Result<MountDet
     let driver_name = info
         .pointer("/0/GraphDriver/Name")
         .and_then(|v| v.as_str())
-        .ok_or("No driver name found")?;
+        .ok_or(error!("No driver name found"))?;
 
     if driver_name == "overlay2" {
         let path = info
             .pointer("/0/GraphDriver/Data/MergedDir")
             .and_then(|v| v.as_str())
-            .ok_or("No merge directory found")?;
+            .ok_or(error!("No merge directory found"))?;
 
         Ok(MountDetail {
             source: PathBuf::from(&path),
             destination: PathBuf::from("/"),
         })
     } else {
-        Err(format!("want driver overlay2, got {}", driver_name).into())
+        Err(error!("want driver overlay2, got {}", driver_name))
     }
 }
 
